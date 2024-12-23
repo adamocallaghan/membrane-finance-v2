@@ -1,10 +1,10 @@
 pragma solidity ^0.8.20;
 
 import {Script, console2} from "forge-std/Script.sol";
-import {Vault} from "../src/Morpho.sol";
+import {Morpho} from "../src/Morpho.sol";
 
 contract DeployMorpho is Script {
-    function run() external {
+    function run() external returns (Morpho) {
         // ===================
         // === SCRIPT VARS ===
         // ===================
@@ -27,9 +27,11 @@ contract DeployMorpho is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // deploy Membrane core contract
-        Morpho membraneApp = new Morpho{salt: "xyz"}(vm.envAddress(DEPLOYER_PUBLIC_ADDRESS));
+        Morpho membraneApp = new Morpho(vm.envAddress(DEPLOYER_PUBLIC_ADDRESS));
         console2.log("Membrane Address: ", address(membraneApp));
 
         vm.stopBroadcast();
+
+        return membraneApp;
     }
 }
