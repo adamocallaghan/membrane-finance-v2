@@ -146,8 +146,11 @@ contract Morpho is IMorphoStaticTyping {
 
     /* MARKET CREATION */
 
+    // @todo: createMarket is to be an onlyOwner function on Membrane Finance
+    // as we do not want just anyone to create their own market
+
     /// @inheritdoc IMorphoBase
-    function createMarket(MarketParams memory marketParams) external {
+    function createMarket(MarketParams memory marketParams) external onlyOwner {
         Id id = marketParams.id();
         require(isIrmEnabled[marketParams.irm], ErrorsLib.IRM_NOT_ENABLED);
         require(isLltvEnabled[marketParams.lltv], ErrorsLib.LLTV_NOT_ENABLED);
