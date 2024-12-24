@@ -11,6 +11,15 @@ struct MarketParams {
     uint256 lltv;
 }
 
+struct NftMarketParams {
+    address loanToken;
+    address collateralToken;
+    uint256 tokenId;
+    address oracle;
+    address irm;
+    uint256 lltv;
+}
+
 /// @dev Warning: For `feeRecipient`, `supplyShares` does not contain the accrued shares since the last interest
 /// accrual.
 struct Position {
