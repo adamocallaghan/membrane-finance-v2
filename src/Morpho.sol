@@ -166,6 +166,22 @@ contract Morpho is IMorphoStaticTyping {
         if (marketParams.irm != address(0)) IIrm(marketParams.irm).borrowRate(marketParams, market[id]);
     }
 
+    function createNftMarket(MarketParams memory marketParams) external onlyOwner {
+        Id id = marketParams.id();
+        require(isIrmEnabled[marketParams.irm], ErrorsLib.IRM_NOT_ENABLED);
+        require(isLltvEnabled[marketParams.lltv], ErrorsLib.LLTV_NOT_ENABLED);
+        require(market[id].lastUpdate == 0, ErrorsLib.MARKET_ALREADY_CREATED);
+
+        // Safe "unchecked" cast.
+        market[id].lastUpdate = uint128(block.timestamp);
+        idToMarketParams[id] = marketParams;
+
+        emit EventsLib.CreateMarket(id, marketParams);
+
+        // Call to initialize the IRM in case it is stateful.
+        if (marketParams.irm != address(0)) IIrm(marketParams.irm).borrowRate(marketParams, market[id]);
+    }
+
     /* SUPPLY MANAGEMENT */
 
     /// @inheritdoc IMorphoBase
