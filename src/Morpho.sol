@@ -6,6 +6,7 @@ import {
     IMorphoStaticTyping,
     IMorphoBase,
     MarketParams,
+    NftMarketParams,
     Position,
     Market,
     Authorization,
@@ -41,7 +42,7 @@ contract Morpho is IMorphoStaticTyping {
     using UtilsLib for uint256;
     using SharesMathLib for uint256;
     using SafeTransferLib for IERC20;
-    using MarketParamsLib for MarketParams;
+    using MarketParamsLib for MarketParams, NftMarketParams;
 
     /* IMMUTABLES */
 
@@ -68,6 +69,7 @@ contract Morpho is IMorphoStaticTyping {
     mapping(address => uint256) public nonce;
     /// @inheritdoc IMorphoStaticTyping
     mapping(Id => MarketParams) public idToMarketParams;
+    mapping(Id => NftMarketParams) public idToNftMarketParams;
 
     /* CONSTRUCTOR */
 
@@ -166,20 +168,20 @@ contract Morpho is IMorphoStaticTyping {
         if (marketParams.irm != address(0)) IIrm(marketParams.irm).borrowRate(marketParams, market[id]);
     }
 
-    function createNftMarket(MarketParams memory marketParams) external onlyOwner {
-        Id id = marketParams.id();
-        require(isIrmEnabled[marketParams.irm], ErrorsLib.IRM_NOT_ENABLED);
-        require(isLltvEnabled[marketParams.lltv], ErrorsLib.LLTV_NOT_ENABLED);
+    function createNftMarket(NftMarketParams memory nftMarketParams) external onlyOwner {
+        Id id = nftMarketParams.nftId();
+        require(isIrmEnabled[nftMarketParams.irm], ErrorsLib.IRM_NOT_ENABLED);
+        require(isLltvEnabled[nftMarketParams.lltv], ErrorsLib.LLTV_NOT_ENABLED);
         require(market[id].lastUpdate == 0, ErrorsLib.MARKET_ALREADY_CREATED);
 
         // Safe "unchecked" cast.
         market[id].lastUpdate = uint128(block.timestamp);
-        idToMarketParams[id] = marketParams;
+        idToMarketParams[id] = nftMarketParams;
 
-        emit EventsLib.CreateMarket(id, marketParams);
+        emit EventsLib.CreateMarket(id, nftMarketParams);
 
         // Call to initialize the IRM in case it is stateful.
-        if (marketParams.irm != address(0)) IIrm(marketParams.irm).borrowRate(marketParams, market[id]);
+        if (nftMarketParams.irm != address(0)) IIrm(nftMarketParams.irm).borrowRate(nftMarketParams, market[id]);
     }
 
     /* SUPPLY MANAGEMENT */

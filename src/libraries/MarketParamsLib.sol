@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import {Id, MarketParams} from "../interfaces/IMorpho.sol";
+import {Id, MarketParams, NftMarketParams} from "../interfaces/IMorpho.sol";
 
 /// @title MarketParamsLib
 /// @author Morpho Labs
@@ -16,6 +16,12 @@ library MarketParamsLib {
     function id(MarketParams memory marketParams) internal pure returns (Id marketParamsId) {
         assembly ("memory-safe") {
             marketParamsId := keccak256(marketParams, MARKET_PARAMS_BYTES_LENGTH)
+        }
+    }
+
+    function nftId(NftMarketParams memory nftMarketParams) internal pure returns (Id nftMarketParamsId) {
+        assembly ("memory-safe") {
+            nftMarketParamsId := keccak256(nftMarketParams, MARKET_PARAMS_BYTES_LENGTH)
         }
     }
 }
