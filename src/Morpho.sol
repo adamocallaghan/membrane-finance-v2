@@ -20,7 +20,7 @@ import {
     IMorphoFlashLoanCallback
 } from "./interfaces/IMorphoCallbacks.sol";
 import {IIrm} from "./interfaces/IIrm.sol";
-import {IERC20} from "./interfaces/IERC20.sol";
+import {IERC20, IERC721} from "./interfaces/IERC20.sol";
 import {IOracle} from "./interfaces/IOracle.sol";
 
 import "./libraries/ConstantsLib.sol";
@@ -70,6 +70,8 @@ contract Morpho is IMorphoStaticTyping {
     /// @inheritdoc IMorphoStaticTyping
     mapping(Id => MarketParams) public idToMarketParams;
     mapping(Id => NftMarketParams) public idToNftMarketParams;
+    /// @inheritdoc IMorphoStaticTyping
+    mapping(Id => mapping(address => NftPosition)) public nftPosition;
 
     /* CONSTRUCTOR */
 
@@ -168,17 +170,25 @@ contract Morpho is IMorphoStaticTyping {
         if (marketParams.irm != address(0)) IIrm(marketParams.irm).borrowRate(marketParams, market[id]);
     }
 
+    /// @inheritdoc IMorphoBase
     function createNftMarket(NftMarketParams memory nftMarketParams) external onlyOwner {
         Id id = nftMarketParams.nftId();
         require(isIrmEnabled[nftMarketParams.irm], ErrorsLib.IRM_NOT_ENABLED);
         require(isLltvEnabled[nftMarketParams.lltv], ErrorsLib.LLTV_NOT_ENABLED);
         require(market[id].lastUpdate == 0, ErrorsLib.MARKET_ALREADY_CREATED);
 
+        // Validate NFT contract
+        require(nftMarketParams.nftContract != address(0), ErrorsLib.ZERO_ADDRESS);
+        require(
+            IERC721(nftMarketParams.nftContract).supportsInterface(0x80ac58cd), // ERC721 interface id
+            ErrorsLib.INVALID_NFT_CONTRACT
+        );
+
         // Safe "unchecked" cast.
         market[id].lastUpdate = uint128(block.timestamp);
-        idToMarketParams[id] = nftMarketParams;
+        idToNftMarketParams[id] = nftMarketParams;
 
-        emit EventsLib.CreateMarket(id, nftMarketParams);
+        emit EventsLib.CreateNftMarket(id, nftMarketParams);
 
         // Call to initialize the IRM in case it is stateful.
         if (nftMarketParams.irm != address(0)) IIrm(nftMarketParams.irm).borrowRate(nftMarketParams, market[id]);
@@ -574,5 +584,71 @@ contract Morpho is IMorphoStaticTyping {
                 mstore(add(res, mul(i, 32)), sload(slot))
             }
         }
+    }
+
+    // Add new error
+    error INVALID_NFT_CONTRACT();
+
+    /// @notice Supply NFT as collateral
+    function supplyNftCollateral(
+        NftMarketParams memory nftMarketParams,
+        uint256[] calldata tokenIds,
+        address onBehalf
+    ) external {
+        Id id = nftMarketParams.nftId();
+        require(market[id].lastUpdate != 0, ErrorsLib.MARKET_NOT_CREATED);
+        require(tokenIds.length > 0, ErrorsLib.ZERO_ASSETS);
+        require(onBehalf != address(0), ErrorsLib.ZERO_ADDRESS);
+
+        // Don't accrue interest because it's not required and saves gas
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            require(
+                IERC721(nftMarketParams.nftContract).ownerOf(tokenIds[i]) == msg.sender,
+                ErrorsLib.NFT_NOT_OWNED
+            );
+            IERC721(nftMarketParams.nftContract).transferFrom(msg.sender, address(this), tokenIds[i]);
+            nftPosition[id][onBehalf].tokenIds.push(tokenIds[i]);
+        }
+
+        emit EventsLib.SupplyNftCollateral(id, msg.sender, onBehalf, tokenIds);
+    }
+
+    /// @notice Withdraw NFT collateral
+    function withdrawNftCollateral(
+        NftMarketParams memory nftMarketParams,
+        uint256[] calldata tokenIds,
+        address onBehalf,
+        address receiver
+    ) external {
+        Id id = nftMarketParams.nftId();
+        require(market[id].lastUpdate != 0, ErrorsLib.MARKET_NOT_CREATED);
+        require(tokenIds.length > 0, ErrorsLib.ZERO_ASSETS);
+        require(receiver != address(0), ErrorsLib.ZERO_ADDRESS);
+        require(_isSenderAuthorized(onBehalf), ErrorsLib.UNAUTHORIZED);
+
+        _accrueInterest(nftMarketParams, id);
+
+        // Remove tokenIds and transfer NFTs
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            bool found = false;
+            uint256[] storage positionTokenIds = nftPosition[id][onBehalf].tokenIds;
+            
+            for (uint256 j = 0; j < positionTokenIds.length; j++) {
+                if (positionTokenIds[j] == tokenIds[i]) {
+                    // Remove token ID by swapping with last element and popping
+                    positionTokenIds[j] = positionTokenIds[positionTokenIds.length - 1];
+                    positionTokenIds.pop();
+                    found = true;
+                    break;
+                }
+            }
+            require(found, ErrorsLib.INVALID_TOKEN_ID);
+            
+            IERC721(nftMarketParams.nftContract).transferFrom(address(this), receiver, tokenIds[i]);
+        }
+
+        require(_isHealthy(nftMarketParams, id, onBehalf), ErrorsLib.INSUFFICIENT_COLLATERAL);
+
+        emit EventsLib.WithdrawNftCollateral(id, msg.sender, onBehalf, receiver, tokenIds);
     }
 }

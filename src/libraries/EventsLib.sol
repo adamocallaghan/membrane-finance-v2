@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.0;
 
-import {Id, MarketParams} from "../interfaces/IMorpho.sol";
+import {Id, MarketParams, NftMarketParams} from "../interfaces/IMorpho.sol";
 
 /// @title EventsLib
 /// @author Morpho Labs
@@ -33,6 +33,11 @@ library EventsLib {
     /// @param id The market id.
     /// @param marketParams The market that was created.
     event CreateMarket(Id indexed id, MarketParams marketParams);
+
+    /// @notice Emitted when creating an NFT market.
+    /// @param id The market id.
+    /// @param marketParams The market that was created.
+    event CreateNftMarket(Id indexed id, NftMarketParams marketParams);
 
     /// @notice Emitted on supply of assets.
     /// @dev Warning: `feeRecipient` receives some shares during interest accrual without any supply event emitted.
@@ -147,4 +152,30 @@ library EventsLib {
     /// @param interest The amount of interest accrued.
     /// @param feeShares The amount of shares minted as fee.
     event AccrueInterest(Id indexed id, uint256 prevBorrowRate, uint256 interest, uint256 feeShares);
+
+    /// @notice Emitted on supply of NFT collateral.
+    /// @param id The market id.
+    /// @param caller The caller.
+    /// @param onBehalf The owner of the modified position.
+    /// @param tokenIds The array of token IDs of the NFTs supplied.
+    event SupplyNftCollateral(
+        Id indexed id,
+        address indexed caller,
+        address indexed onBehalf,
+        uint256[] tokenIds
+    );
+
+    /// @notice Emitted on withdrawal of NFT collateral.
+    /// @param id The market id.
+    /// @param caller The caller.
+    /// @param onBehalf The owner of the modified position.
+    /// @param receiver The address that received the withdrawn collateral.
+    /// @param tokenIds The array of token IDs of the NFTs withdrawn.
+    event WithdrawNftCollateral(
+        Id indexed id,
+        address caller,
+        address indexed onBehalf,
+        address indexed receiver,
+        uint256[] tokenIds
+    );
 }

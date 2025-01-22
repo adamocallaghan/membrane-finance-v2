@@ -77,4 +77,16 @@ library ErrorsLib {
 
     /// @notice Thrown when the maximum uint128 is exceeded.
     string internal constant MAX_UINT128_EXCEEDED = "max uint128 exceeded";
+
+    /// @notice Thrown when the NFT contract is invalid.
+    string constant INVALID_NFT_CONTRACT = "INVALID_NFT_CONTRACT";
+
+    /// @notice Thrown when the NFT transfer failed.
+    string constant NFT_TRANSFER_FAILED = "NFT_TRANSFER_FAILED";
+
+    /// @notice Thrown when the token ID is invalid.
+    string constant INVALID_TOKEN_ID = "INVALID_TOKEN_ID";
+
+    /// @notice Thrown when the NFT is not owned by the caller.
+    string constant NFT_NOT_OWNED = "NFT_NOT_OWNED";
 }

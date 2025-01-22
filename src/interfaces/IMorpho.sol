@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity >=0.5.0;
 
+import {IERC721} from "./IERC721.sol";
+
 type Id is bytes32;
 
 struct MarketParams {
@@ -12,12 +14,12 @@ struct MarketParams {
 }
 
 struct NftMarketParams {
-    address loanToken;
-    address collateralToken;
-    uint256 tokenId;
-    address oracle;
-    address irm;
-    uint256 lltv;
+    address nftContract;      // The NFT contract address used as collateral
+    address stablecoin;      // The stablecoin that will be borrowed
+    address oracle;          // The oracle used to price the NFT
+    address irm;            // The interest rate model
+    uint256 lltv;          // The liquidation LTV (scaled by WAD)
+    uint256 fee;           // The fee rate (scaled by WAD)
 }
 
 /// @dev Warning: For `feeRecipient`, `supplyShares` does not contain the accrued shares since the last interest
@@ -360,3 +362,12 @@ interface IMorpho is IMorphoBase {
     /// 2s by creating a wrapper contract with functions that take `id` as input instead of `marketParams`.
     function idToMarketParams(Id id) external view returns (MarketParams memory);
 }
+
+// Add NftPosition struct to track NFT positions
+struct NftPosition {
+    uint256[] tokenIds;     // Array of NFT token IDs used as collateral
+    uint256 borrowShares;   // The number of borrow shares
+}
+
+// Add mapping for NFT positions
+mapping(Id => mapping(address => NftPosition)) public nftPosition;

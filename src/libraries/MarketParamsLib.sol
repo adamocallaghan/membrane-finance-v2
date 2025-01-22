@@ -19,9 +19,18 @@ library MarketParamsLib {
         }
     }
 
-    function nftId(NftMarketParams memory nftMarketParams) internal pure returns (Id nftMarketParamsId) {
-        assembly ("memory-safe") {
-            nftMarketParamsId := keccak256(nftMarketParams, MARKET_PARAMS_BYTES_LENGTH)
-        }
+    function nftId(NftMarketParams memory nftMarketParams) internal view returns (Id) {
+        return Id.wrap(
+            keccak256(
+                abi.encode(
+                    nftMarketParams.nftContract,
+                    nftMarketParams.stablecoin,
+                    nftMarketParams.oracle,
+                    nftMarketParams.irm,
+                    nftMarketParams.lltv,
+                    block.chainid
+                )
+            )
+        );
     }
 }
